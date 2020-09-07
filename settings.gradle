@@ -1,0 +1,2 @@
+rootProject.name = 'log-partitioned-region-bucket-details'
+include 'client','server'
