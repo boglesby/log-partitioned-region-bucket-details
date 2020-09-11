@@ -13,6 +13,42 @@ public class PartitionedRegionDetails {
 
   private String regionPath;
 
+  private long entries;
+
+  private long primaryEntries;
+
+  private long redundantEntries;
+
+  private long entriesInMemory;
+
+  private long primaryEntriesInMemory;
+
+  private long redundantEntriesInMemory;
+
+  private long entriesOnDisk;
+
+  private long primaryEntriesOnDisk;
+
+  private long redundantEntriesOnDisk;
+
+  private long bytes;
+
+  private long primaryBytes;
+
+  private long redundantBytes;
+
+  private long bytesInMemory;
+
+  private long primaryBytesInMemory;
+
+  private long redundantBytesInMemory;
+
+  private long bytesOnDisk;
+
+  private long primaryBytesOnDisk;
+
+  private long redundantBytesOnDisk;
+
   private List<BucketRegionDetails> primaryBucketRegionDetails;
 
   private List<BucketRegionDetails> redundantBucketRegionDetails;
@@ -23,68 +59,136 @@ public class PartitionedRegionDetails {
 
   public PartitionedRegionDetails(PartitionedRegion pr) {
     this.regionPath = pr.getFullPath();
+    this.primaryBucketRegionDetails = new ArrayList<>();
+    this.redundantBucketRegionDetails = new ArrayList<>();
     initialize(pr);
   }
 
   private void initialize(PartitionedRegion pr) {
-    this.primaryBucketRegionDetails = new ArrayList<>();
-    this.redundantBucketRegionDetails = new ArrayList<>();
     pr.getDataStore().getAllLocalBucketRegions()
       .stream()
       .sorted(Comparator.comparingInt(BucketRegion::getId))
       .forEach(
         br -> {
           BucketRegionDetails bri = new BucketRegionDetails(pr, br);
+          initializeTotalDetails(bri);
           if (pr.getRegionAdvisor().isPrimaryForBucket(br.getId())) {
-            this.primaryBucketRegionDetails.add(bri);
+            initializeTotalPrimaryDetails(bri);
           } else {
-            this.redundantBucketRegionDetails.add(bri);
+            initializeTotalRedundantDetails(bri);
           }
         });
   }
 
-  public String toString() {
-    StringBuilder builder = new StringBuilder();
-    builder.append("\n");
-    addBucketRegionDetails(builder, this.primaryBucketRegionDetails, "primary");
-    builder.append("\n\n");
-    addBucketRegionDetails(builder, this.redundantBucketRegionDetails, "redundant");
-    return builder.toString();
+  private void initializeTotalDetails(BucketRegionDetails bri) {
+    this.entries += bri.getEntries();
+    this.entriesInMemory += bri.getEntriesInMemory();
+    this.entriesOnDisk += bri.getEntriesOnDisk();
+    this.bytes += bri.getBytes();
+    this.bytesInMemory += bri.getBytesInMemory();
+    this.bytesOnDisk += bri.getBytesOnDisk();
   }
 
-  private void addBucketRegionDetails(StringBuilder builder, List<BucketRegionDetails> bucketRegionDetails, String type) {
-    long totalEntries=0l, totalEntriesInMemory=0l, totalEntriesOnDisk=0l,
-      totalBytes=0l, totalBytesInMemory=0l, totalBytesOnDisk=0l;
+  private void initializeTotalPrimaryDetails(BucketRegionDetails bri) {
+    this.primaryBucketRegionDetails.add(bri);
+    this.primaryEntries += bri.getEntries();
+    this.primaryEntriesInMemory += bri.getEntriesInMemory();
+    this.primaryEntriesOnDisk += bri.getEntriesOnDisk();
+    this.primaryBytes += bri.getBytes();
+    this.primaryBytesInMemory += bri.getBytesInMemory();
+    this.primaryBytesOnDisk += bri.getBytesOnDisk();
+  }
+
+  private void initializeTotalRedundantDetails(BucketRegionDetails bri) {
+    this.redundantBucketRegionDetails.add(bri);
+    this.redundantEntries += bri.getEntries();
+    this.redundantEntriesInMemory += bri.getEntriesInMemory();
+    this.redundantEntriesOnDisk += bri.getEntriesOnDisk();
+    this.redundantBytes += bri.getBytes();
+    this.redundantBytesInMemory += bri.getBytesInMemory();
+    this.redundantBytesOnDisk += bri.getBytesOnDisk();
+  }
+
+  public String toString() {
+    StringBuilder builder = new StringBuilder();
     builder
       .append("Region ")
       .append(this.regionPath)
-      .append(" contains the following ")
-      .append(bucketRegionDetails.size())
-      .append(" ")
-      .append(type)
-      .append(" buckets:");
-    for (BucketRegionDetails brDetails : bucketRegionDetails) {
-      totalEntries += brDetails.getEntries();
-      totalEntriesInMemory += brDetails.getEntriesInMemory();
-      totalEntriesOnDisk += brDetails.getEntriesOnDisk();
-      totalBytes += brDetails.getBytes();
-      totalBytesInMemory += brDetails.getBytesInMemory();
-      totalBytesOnDisk += brDetails.getBytesOnDisk();
-      builder.append("\n\t").append(brDetails);
-    }
+      .append(" Bucket Details:")
+      .append("\n");
+    addTotalDetails(builder);
+    addTotalPrimaryDetails(builder);
+    addTotalRedundantDetails(builder);
+    addBucketDetails(builder, this.primaryBucketRegionDetails, "Primary");
+    addBucketDetails(builder, this.redundantBucketRegionDetails, "Redundant");
+    return builder.toString();
+  }
+
+  private void addTotalDetails(StringBuilder builder) {
     builder
       .append("\n\tTotal ")
-      .append("entries=")
-      .append(format.format(totalEntries))
+      .append("buckets=")
+      .append(format.format(this.primaryBucketRegionDetails.size() + this.redundantBucketRegionDetails.size()))
+      .append("; entries=")
+      .append(format.format(entries))
       .append("; entriesInMemory=")
-      .append(format.format(totalEntriesInMemory))
+      .append(format.format(entriesInMemory))
       .append("; entriesOnDisk=")
-      .append(format.format(totalEntriesOnDisk))
+      .append(format.format(entriesOnDisk))
       .append("; bytes=")
-      .append(format.format(totalBytes))
+      .append(format.format(bytes))
       .append("; bytesInMemory=")
-      .append(format.format(totalBytesInMemory))
+      .append(format.format(bytesInMemory))
       .append("; bytesOnDisk=")
-      .append(format.format(totalBytesOnDisk));
+      .append(format.format(bytesOnDisk));
+  }
+
+  private void addTotalPrimaryDetails(StringBuilder builder) {
+    builder
+      .append("\n\tPrimary ")
+      .append("buckets=")
+      .append(format.format(this.primaryBucketRegionDetails.size()))
+      .append("; entries=")
+      .append(format.format(primaryEntries))
+      .append("; entriesInMemory=")
+      .append(format.format(primaryEntriesInMemory))
+      .append("; entriesOnDisk=")
+      .append(format.format(primaryEntriesOnDisk))
+      .append("; bytes=")
+      .append(format.format(primaryBytes))
+      .append("; bytesInMemory=")
+      .append(format.format(primaryBytesInMemory))
+      .append("; bytesOnDisk=")
+      .append(format.format(primaryBytesOnDisk));
+  }
+
+  private void addTotalRedundantDetails(StringBuilder builder) {
+    builder
+      .append("\n\tRedundant ")
+      .append("buckets=")
+      .append(format.format(this.redundantBucketRegionDetails.size()))
+      .append("; entries=")
+      .append(format.format(redundantEntries))
+      .append("; entriesInMemory=")
+      .append(format.format(redundantEntriesInMemory))
+      .append("; entriesOnDisk=")
+      .append(format.format(redundantEntriesOnDisk))
+      .append("; bytes=")
+      .append(format.format(redundantBytes))
+      .append("; bytesInMemory=")
+      .append(format.format(redundantBytesInMemory))
+      .append("; bytesOnDisk=")
+      .append(format.format(redundantBytesOnDisk));
+  }
+
+  private void addBucketDetails(StringBuilder builder, List<BucketRegionDetails> bucketRegionDetails, String type) {
+    builder
+      .append("\n\n")
+      .append(type)
+      .append(" Buckets:")
+      .append("\n");
+    for (BucketRegionDetails brDetails : bucketRegionDetails) {
+      builder.append("\n\t").append(brDetails);
+    }
   }
 }
